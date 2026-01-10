@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   Security Weather Station - Design System
+   ============================================================================= */
+
+:root {
+  /* Base */
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  
+  /* Weather Colors - Sunny */
+  --sunny-bg: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+  --sunny-accent: #fbbf24;
+  --sunny-text: #0c4a6e;
+  
+  /* Weather Colors - Cloudy */
+  --cloudy-bg: linear-gradient(135deg, #475569 0%, #64748b 50%, #94a3b8 100%);
+  --cloudy-accent: #cbd5e1;
+  --cloudy-text: #1e293b;
+  
+  /* Weather Colors - Rainy */
+  --rainy-bg: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #3b82f6 100%);
+  --rainy-accent: #60a5fa;
+  --rainy-text: #dbeafe;
+  
+  /* Weather Colors - Stormy */
+  --stormy-bg: linear-gradient(135deg, #1f1225 0%, #581c87 50%, #7c3aed 100%);
+  --stormy-accent: #f43f5e;
+  --stormy-text: #fce7f3;
+  
+  /* UI Elements */
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --card-hover: rgba(255, 255, 255, 0.1);
+  
+  /* Threat Level Colors */
+  --threat-1: #22c55e;
+  --threat-2: #84cc16;
+  --threat-3: #eab308;
+  --threat-4: #f97316;
+  --threat-5: #ef4444;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Weather Background Classes */
+.weather-sunny {
+  background: var(--sunny-bg);
+}
+
+.weather-cloudy {
+  background: var(--cloudy-bg);
+}
+
+.weather-rainy {
+  background: var(--rainy-bg);
+}
+
+.weather-stormy {
+  background: var(--stormy-bg);
+  animation: stormy-pulse 3s ease-in-out infinite;
+}
+
+@keyframes stormy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+/* =============================================================================
+   Card Components
+   ============================================================================= */
+
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  background: var(--card-hover);
+  transform: translateY(-2px);
+}
+
+/* =============================================================================
+   Weather Icon
+   ============================================================================= */
+
+.weather-icon {
+  font-size: 6rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* =============================================================================
+   Threat Level Gauge
+   ============================================================================= */
+
+.threat-gauge {
+  display: flex;
+  gap: 0.25rem;
+  height: 0.5rem;
+}
+
+.threat-gauge-segment {
+  flex: 1;
+  border-radius: 0.25rem;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.threat-gauge-segment.active {
+  opacity: 1;
+}
+
+.threat-1 { background: var(--threat-1); }
+.threat-2 { background: var(--threat-2); }
+.threat-3 { background: var(--threat-3); }
+.threat-4 { background: var(--threat-4); }
+.threat-5 { background: var(--threat-5); }
+
+/* =============================================================================
+   News List
+   ============================================================================= */
+
+.news-item {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.news-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* =============================================================================
+   Typography
+   ============================================================================= */
+
+.headline {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.subheadline {
+  font-size: 1.125rem;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* =============================================================================
+   Mode Badge
+   ============================================================================= */
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mode-forecast {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.mode-review {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+/* =============================================================================
+   Loading State
+   ============================================================================= */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
