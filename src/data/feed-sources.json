@@ -1,0 +1,91 @@
+{
+    "sources": [
+        {
+            "id": "jpcert",
+            "name": "JPCERT/CC",
+            "url": "https://www.jpcert.or.jp/rss/jpcert.rdf",
+            "type": "jpcert",
+            "language": "ja",
+            "description": "日本のセキュリティインシデント対応チーム",
+            "enabled": true
+        },
+        {
+            "id": "ipa",
+            "name": "IPA 重要なセキュリティ情報",
+            "url": "https://www.ipa.go.jp/security/rss/alert.rdf",
+            "type": "rss",
+            "language": "ja",
+            "description": "情報処理推進機構のセキュリティ警告",
+            "enabled": true
+        },
+        {
+            "id": "jvn",
+            "name": "JVN (Japan Vulnerability Notes)",
+            "url": "https://jvn.jp/rss/jvn.rdf",
+            "type": "rss",
+            "language": "ja",
+            "description": "日本の脆弱性情報データベース",
+            "enabled": true
+        },
+        {
+            "id": "nvd",
+            "name": "NVD (National Vulnerability Database)",
+            "url": "https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss.xml",
+            "type": "nvd",
+            "language": "en",
+            "description": "米国NISTの脆弱性データベース",
+            "enabled": false,
+            "note": "大量のデータのため、初期設定では無効"
+        },
+        {
+            "id": "cisa",
+            "name": "CISA Alerts",
+            "url": "https://www.cisa.gov/uscert/ncas/alerts.xml",
+            "type": "rss",
+            "language": "en",
+            "description": "米国サイバーセキュリティ・インフラセキュリティ庁の警告",
+            "enabled": false,
+            "note": "英語ソース"
+        },
+        {
+            "id": "krebs",
+            "name": "Krebs on Security",
+            "url": "https://krebsonsecurity.com/feed/",
+            "type": "rss",
+            "language": "en",
+            "description": "著名なセキュリティジャーナリストBrian Krebsのブログ",
+            "enabled": false,
+            "note": "英語ブログ"
+        },
+        {
+            "id": "github-advisory",
+            "name": "GitHub Security Advisories",
+            "url": "https://github.com/advisories.atom",
+            "type": "rss",
+            "language": "en",
+            "description": "GitHubのセキュリティアドバイザリ",
+            "enabled": false,
+            "note": "開発者向け、大量のデータ"
+        }
+    ],
+    "categories": {
+        "official": [
+            "jpcert",
+            "ipa",
+            "jvn",
+            "nvd",
+            "cisa"
+        ],
+        "blog": [
+            "krebs"
+        ],
+        "developer": [
+            "github-advisory"
+        ]
+    },
+    "defaultEnabled": [
+        "jpcert",
+        "ipa",
+        "jvn"
+    ]
+}

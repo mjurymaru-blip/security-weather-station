@@ -10,22 +10,15 @@
 
 ---
 
-## ユーザー確認事項
-
-> [!IMPORTANT]
-> - **API Key**: 環境変数 `GEMINI_API_KEY` が必要
-> - **プロジェクトテンプレート**: ✅ 適用済み
-
----
-
 ## 技術スタック
 
 | 項目 | 選定 |
 |------|------|
-| フレームワーク | Next.js (App Router) |
+| フレームワーク | Next.js 16 (App Router) |
 | スタイリング | Tailwind CSS (天気テーマパレット) |
 | AI | Google Generative AI SDK (`@google/generative-ai`) |
-| テンプレート | ✅ 適用済み (`.agent/workflows` 含む) |
+| データ管理 | JSON ファイル（camp-checklist方式） |
+| 状態管理 | localStorage（クライアント設定） |
 
 ---
 
@@ -33,6 +26,11 @@
 
 ```mermaid
 graph LR
+    subgraph DataLayer["📂 Data Layer"]
+        FeedJSON[feed-sources.json]
+        MockData[mock-reports.ts]
+    end
+    
     subgraph Collector
         RSS[RSS/NVD/JPCERT]
     end
@@ -46,13 +44,17 @@ graph LR
     
     subgraph Frontend
         Dashboard[Dashboard UI]
+        DemoMode[Demo Mode]
+        Settings[Settings UI]
     end
     
+    FeedJSON --> RSS
     RSS --> Orchestrator
     Orchestrator -->|strategy| Analyst
     Analyst --> Scorer
     Scorer --> Narrator
     Narrator --> Dashboard
+    MockData --> DemoMode
 ```
 
 ---
@@ -62,6 +64,14 @@ graph LR
 ### 1. 🛰️ Collector Service
 
 指定ソース（RSS, JSON API）からデータを取得し、標準フォーマットに正規化。
+
+**ソース管理**: `src/data/feed-sources.json`
+- JPCERT/CC ✅
+- IPA セキュリティ情報 ✅
+- JVN 脆弱性情報 ✅
+- NVD (オプション)
+- CISA (オプション)
+- GitHub Advisories (オプション)
 
 ```typescript
 interface NewsItem {
@@ -86,7 +96,6 @@ interface NewsItem {
 - 深掘り or 簡略化を判断
 - Analystへ渡すPromptのトーンを制御
 
-**入力:** `NewsItem[]`  
 **出力:**
 ```json
 {
@@ -95,16 +104,6 @@ interface NewsItem {
   "reason": "CVE volume is low, but one is highly relevant to Docker",
   "focusItems": ["CVE-2025-XXXX"]
 }
-```
-
-**Prompt例:**
-```
-あなたはサイバー気象予報センターの司令塔です。
-本日のニュース一覧を確認し、以下を判断してください：
-- strategy: brief（簡潔）/ normal / deep（深掘り）
-- tone: calm（静穏）/ cautious（注意）/ alert（警戒）
-- focusItems: 特に注目すべき項目のID
-ユーザーの技術スタック: Linux, Docker, Next.js, PostgreSQL
 ```
 
 ---
@@ -122,41 +121,11 @@ interface NewsItem {
 | Relevance | 技術スタック一致率 | 0.35 |
 | Trend | 昨日比（増加/減少） | 0.15 |
 
-**天気マッピング:**
-```typescript
-type WeatherCondition = 'sunny' | 'cloudy' | 'rainy' | 'stormy';
-
-function calcWeather(scores: WeatherScores): WeatherCondition {
-  const total = 
-    scores.volume * 0.2 +
-    scores.severity * 0.3 +
-    scores.relevance * 0.35 +
-    scores.trend * 0.15;
-  
-  if (total < 0.25) return 'sunny';
-  if (total < 0.50) return 'cloudy';
-  if (total < 0.75) return 'rainy';
-  return 'stormy';
-}
-```
-
 ---
 
 ### 4. 🔬 Analyst Agent
 
 Orchestratorの戦略に従い、技術的分析を実行。
-
-**入力:** `NewsItem[]` + `OrchestratorOutput`  
-**出力:**
-```json
-{
-  "weather_condition": "rainy",
-  "threat_level": 3,
-  "summary": "DockerのリモートAPI脆弱性が報告。ローカル環境では影響軽微。",
-  "relevance_reason": "Dockerを利用中のため要確認",
-  "analyzed_items": [...]
-}
-```
 
 ---
 
@@ -170,48 +139,51 @@ Orchestratorの戦略に従い、技術的分析を実行。
 
 ---
 
-## Frontend（Dashboard）
+## Frontend
 
-### Hero Section
-- 大きな天気アイコン + ステータス
-- 「今日のインターネットは ○○ です」
+### ダッシュボード (`/`)
+- 天気アイコン + ステータス
+- 脅威レベルゲージ
+- 3行要約カード
+- 関連性説明カード
+- ニュースリスト
 
-### Relevance Card
-- 「なぜあなたに関係あるか」を3行で
+### デモモード
+- URLパラメータで天気切替: `/?weather=stormy`
+- モックデータ: `src/data/mock-reports.ts`
 
-### News Feed
-- 天候判定の根拠となったニュースリスト
-- 重要度順にソート
-
-### 時間軸表示
-- 朝: **予報モード** (Forecast)
-- 夜: **振り返りモード** (Review)
-
----
-
-## 検証計画
-
-### 自動テスト
-- `npm run dev` でローカル起動確認
-- Agent単体テスト（モックデータ使用）
-
-### 手動検証
-- 実際のRSSフィードを取得して天気判定を確認
-- 朝/夜モードの切り替え動作確認
+### 設定UI（予定）
+- APIキー入力（localStorage保存）
+- 技術スタック設定
+- RSSソース有効/無効切替
 
 ---
 
-## Philosophy（README用）
+## camp-checklist との設計共通点
 
-```markdown
+| 項目 | camp-checklist | Security Weather Station |
+|------|----------------|--------------------------|
+| データ管理 | JSONファイル（レシピ） | JSONファイル（RSSソース） |
+| APIキー | localStorage | localStorage（予定） |
+| AI連携 | Gemini Pro | Gemini Pro |
+| オフライン | PWA対応 | PWA対応（予定） |
+
+---
+
+## 次のステップ
+
+1. **クライアント設定UI** - APIキー入力、localStorage保存
+2. **PWA対応** - Service Worker、manifest.json
+3. **実データテスト** - 本物のRSSフィードで動作確認
+
+---
+
 ## Philosophy
 
-Security Weather Station does not aim to provide
-complete or authoritative security analysis.
+Security Weather Station does not aim to provide complete or authoritative security analysis.
 
 Instead, it answers a simpler question:
 
-> "Do I need to care about this today?"
+> **"Do I need to care about this today?"**
 
 This app is intentionally opinionated toward individual developers.
-```

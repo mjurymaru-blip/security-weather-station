@@ -6,31 +6,35 @@
  */
 
 import type { NewsItem, NewsSource } from '@/types';
+import feedSourcesData from '@/data/feed-sources.json';
 
 /**
  * フィードソースの設定
  */
 export interface FeedSource {
+    id: string;
     name: string;
     url: string;
     type: NewsSource;
+    language: string;
+    description: string;
+    enabled: boolean;
+    note?: string;
 }
 
 /**
- * 初期サポートするフィードソース
+ * フィードソース設定を読み込み
  */
-export const FEED_SOURCES: FeedSource[] = [
-    {
-        name: 'JPCERT/CC',
-        url: 'https://www.jpcert.or.jp/rss/jpcert.rdf',
-        type: 'jpcert',
-    },
-    {
-        name: 'IPA 重要なセキュリティ情報',
-        url: 'https://www.ipa.go.jp/security/rss/alert.rdf',
-        type: 'rss',
-    },
-];
+export function getFeedSources(): FeedSource[] {
+    return feedSourcesData.sources as FeedSource[];
+}
+
+/**
+ * 有効なフィードソースのみ取得
+ */
+export function getEnabledFeedSources(): FeedSource[] {
+    return getFeedSources().filter((source) => source.enabled);
+}
 
 /**
  * RSS/RDFフィードをパースしてNewsItemに変換
@@ -102,8 +106,10 @@ export async function fetchFeed(source: FeedSource): Promise<NewsItem[]> {
  * 全フィードソースからニュースを収集
  */
 export async function collectAllNews(): Promise<NewsItem[]> {
+    const enabledSources = getEnabledFeedSources();
+
     const results = await Promise.all(
-        FEED_SOURCES.map((source) => fetchFeed(source))
+        enabledSources.map((source) => fetchFeed(source))
     );
 
     // フラット化して日付順にソート（新しい順）

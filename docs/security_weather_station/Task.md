@@ -4,7 +4,7 @@
 - [x] プロジェクト初期化 (テンプレート利用)
     - [x] テンプレートリポジトリのクローン
     - [x] Git履歴のリセットと初期化
-    - [ ] Giteaリモートの設定
+    - [x] Giteaリモートの設定
     - [x] Next.js アプリケーションのセットアップ
     - [x] `@google/generative-ai` インストール
 
@@ -15,7 +15,7 @@
 ### 2.1 Collector
 - [x] `NewsItem` 型定義 (`src/types/index.ts`)
 - [x] RSS/Atomフィード取得ユーティリティ (`src/lib/collector.ts`)
-- [x] 初期ソース: JPCERT RSS, IPA
+- [x] 初期ソース: JPCERT, IPA, JVN
 
 ### 2.2 Orchestrator Agent（司令塔）
 - [x] `OrchestratorOutput` 型定義
@@ -65,7 +65,45 @@
 
 ## Phase 4: 仕上げ
 
-- [ ] README.md に Philosophy セクション追加
-- [ ] 環境変数テンプレート (`.env.example`)
-- [ ] Giteaへのバックアップ (`/backup`)
-- [ ] 動作確認・微調整
+- [x] README.md に Philosophy セクション追加
+- [x] 環境変数テンプレート (`.env.example`)
+- [x] Giteaへの初回バックアップ
+
+---
+
+## Phase 5: 追加機能（進行中）
+
+### 5.1 デモモード
+- [x] モックデータ作成 (`src/data/mock-reports.ts`)
+- [x] URLパラメータで天気切替 (`?weather=stormy`)
+- [x] デモモードバナー UI
+
+### 5.2 データ管理
+- [x] RSSソースをJSON化 (`src/data/feed-sources.json`)
+- [x] 有効/無効フラグ対応
+
+### 5.3 クライアント設定
+- [x] 設定ストア (`src/lib/settings-store.ts`)
+- [x] React Hook (`src/hooks/useSettings.ts`)
+- [x] 設定パネルUI (`src/components/SettingsPanel.tsx`)
+- [x] APIキーテストAPI (`/api/test-key`)
+- [x] 本番分析API (`/api/analyze`)
+- [x] localStorage保存
+- [x] ユーザープロファイル設定
+
+### 5.4 PWA対応（未着手）
+- [ ] Service Worker
+- [ ] manifest.json
+- [ ] オフライン対応
+
+---
+
+## 📊 進捗サマリー
+
+| Phase | 状態 |
+|-------|------|
+| 1. 基盤 | ✅ 完了 |
+| 2. Intelligence | ✅ 完了 |
+| 3. UI | ✅ 完了 |
+| 4. 仕上げ | ✅ 完了 |
+| 5. 追加機能 | 🔄 進行中 |
