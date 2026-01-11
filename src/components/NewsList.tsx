@@ -50,7 +50,7 @@ export function NewsList({ items }: NewsListProps) {
                                 </h4>
                                 <p className="text-xs opacity-70 line-clamp-2">{item.summary}</p>
                                 <div className="mt-1 flex items-center gap-2 text-xs opacity-50">
-                                    <span>関連度: {Math.round(item.relevanceScore * 100)}%</span>
+                                    <span>関連度: {Math.min(100, Math.round(item.relevanceScore > 1 ? item.relevanceScore : item.relevanceScore * 100))}%</span>
                                 </div>
                             </div>
                             <ThreatBadge level={item.threatLevel} />
