@@ -1,8 +1,11 @@
 const CACHE_NAME = 'security-weather-v1';
+const BASE_PATH = '/security-weather-station';
 
 const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/icons/icon-192.png`,
+  `${BASE_PATH}/icons/icon-512.png`,
 ];
 
 self.addEventListener('install', (event) => {
@@ -29,11 +32,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
-  if (url.pathname.startsWith('/api/')) {
+
+  // APIリクエストはスキップ
+  if (url.pathname.includes('/api/')) {
     return;
   }
-  
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -50,7 +54,7 @@ self.addEventListener('fetch', (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          return caches.match('/');
+          return caches.match(`${BASE_PATH}/`);
         });
       })
   );

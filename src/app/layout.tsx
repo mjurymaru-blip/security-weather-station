@@ -14,10 +14,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// GitHub Pages用のベースパス
+const basePath = process.env.NODE_ENV === 'production' ? '/security-weather-station' : '';
+
 export const metadata: Metadata = {
   title: "Security Weather Station",
   description: "今日のインターネットは荒れ模様です - セキュリティ気象予報AI",
-  manifest: "/manifest.json",
+  manifest: `${basePath}/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -40,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href={`${basePath}/icons/icon-192.png`} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
