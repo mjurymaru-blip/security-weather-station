@@ -167,6 +167,14 @@ export function clearCache(): void {
 }
 
 /**
+ * パスワード入力が必要か（暗号化されているがキャッシュがない）
+ */
+export function needsPasswordUnlock(): boolean {
+    if (typeof window === 'undefined') return false;
+    return hasEncryptedKey() && getCachedApiKey() === null;
+}
+
+/**
  * パスワード強度チェック
  */
 export function validatePassword(password: string): { valid: boolean; error?: string } {
