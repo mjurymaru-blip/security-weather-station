@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useWeatherReport } from '@/hooks/useWeatherReport';
+import { useWeatherHistory } from '@/hooks/useWeatherHistory';
 import {
     WeatherIcon,
     ThreatGauge,
@@ -8,6 +10,7 @@ import {
     BroadcastCard,
     RelevanceCard,
     NewsList,
+    WeatherTrend,
 } from '@/components';
 import type { WeatherCondition } from '@/types';
 
@@ -34,6 +37,14 @@ function LoadingState() {
 
 export function Dashboard() {
     const { report, isLoading, error, isLiveMode, refresh } = useWeatherReport();
+    const { history, isLoading: historyLoading, saveCurrentReport } = useWeatherHistory();
+
+    // レポート取得成功時に履歴を保存
+    useEffect(() => {
+        if (report && !isLoading) {
+            saveCurrentReport(report);
+        }
+    }, [report, isLoading, saveCurrentReport]);
 
     if (isLoading) {
         return <LoadingState />;
@@ -121,6 +132,9 @@ export function Dashboard() {
                         body={report.body}
                         closingRemark={report.closingRemark}
                     />
+
+                    {/* Weather Trend */}
+                    <WeatherTrend history={history} isLoading={historyLoading} />
 
                     {/* Relevance */}
                     <RelevanceCard reason={report.relevanceReason} />
