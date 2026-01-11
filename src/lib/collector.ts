@@ -7,6 +7,7 @@
 
 import type { NewsItem, NewsSource } from '@/types';
 import feedSourcesData from '@/data/feed-sources.json';
+import { XMLParser } from 'fast-xml-parser';
 
 /**
  * フィードソースの設定
@@ -37,30 +38,96 @@ export function getEnabledFeedSources(): FeedSource[] {
 }
 
 /**
+ * XMLパーサーインスタンス
+ */
+const xmlParser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+});
+
+/**
  * RSS/RDFフィードをパースしてNewsItemに変換
  */
-function parseRSSItem(item: Element, source: FeedSource): NewsItem | null {
-    try {
-        const title = item.querySelector('title')?.textContent?.trim();
-        const link = item.querySelector('link')?.textContent?.trim();
-        const description = item.querySelector('description')?.textContent?.trim();
-        const pubDate = item.querySelector('pubDate, dc\\:date, date')?.textContent?.trim();
+function parseRSSItems(data: Record<string, unknown>, source: FeedSource): NewsItem[] {
+    const items: NewsItem[] = [];
 
-        if (!title || !link) {
-            return null;
+    try {
+        // RSS 2.0 形式
+        let rawItems = (data?.rss as Record<string, unknown>)?.channel as Record<string, unknown>;
+        if (rawItems?.item) {
+            const itemList = Array.isArray(rawItems.item) ? rawItems.item : [rawItems.item];
+            for (const item of itemList as Record<string, unknown>[]) {
+                const title = item.title as string;
+                const link = item.link as string;
+                const description = item.description as string;
+                const pubDate = (item.pubDate || item['dc:date']) as string;
+
+                if (title && link) {
+                    items.push({
+                        id: `${source.type}-${Buffer.from(link).toString('base64').slice(0, 16)}`,
+                        title: String(title).trim(),
+                        source: source.type,
+                        sourceUrl: String(link).trim(),
+                        publishedAt: pubDate ? new Date(pubDate) : new Date(),
+                        rawContent: description ? String(description).trim() : '',
+                    });
+                }
+            }
         }
 
-        return {
-            id: `${source.type}-${Buffer.from(link).toString('base64').slice(0, 16)}`,
-            title,
-            source: source.type,
-            sourceUrl: link,
-            publishedAt: pubDate ? new Date(pubDate) : new Date(),
-            rawContent: description || '',
-        };
-    } catch {
-        return null;
+        // RDF 形式 (JPCERT, IPA)
+        const rdf = data?.['rdf:RDF'] as Record<string, unknown>;
+        if (rdf?.item) {
+            const itemList = Array.isArray(rdf.item) ? rdf.item : [rdf.item];
+            for (const item of itemList as Record<string, unknown>[]) {
+                const title = item.title as string;
+                const link = item.link as string;
+                const description = item.description as string;
+                const pubDate = item['dc:date'] as string;
+
+                if (title && link) {
+                    items.push({
+                        id: `${source.type}-${Buffer.from(link).toString('base64').slice(0, 16)}`,
+                        title: String(title).trim(),
+                        source: source.type,
+                        sourceUrl: String(link).trim(),
+                        publishedAt: pubDate ? new Date(pubDate) : new Date(),
+                        rawContent: description ? String(description).trim() : '',
+                    });
+                }
+            }
+        }
+
+        // Atom 形式
+        const feed = data?.feed as Record<string, unknown>;
+        if (feed?.entry) {
+            const entryList = Array.isArray(feed.entry) ? feed.entry : [feed.entry];
+            for (const entry of entryList as Record<string, unknown>[]) {
+                const title = entry.title as string | { '#text': string };
+                const link = entry.link as { '@_href': string } | { '@_href': string }[];
+                const summary = entry.summary as string;
+                const updated = entry.updated as string;
+
+                const titleText = typeof title === 'string' ? title : title?.['#text'];
+                const linkHref = Array.isArray(link) ? link[0]?.['@_href'] : link?.['@_href'];
+
+                if (titleText && linkHref) {
+                    items.push({
+                        id: `${source.type}-${Buffer.from(linkHref).toString('base64').slice(0, 16)}`,
+                        title: String(titleText).trim(),
+                        source: source.type,
+                        sourceUrl: String(linkHref).trim(),
+                        publishedAt: updated ? new Date(updated) : new Date(),
+                        rawContent: summary ? String(summary).trim() : '',
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error parsing ${source.name}:`, error);
     }
+
+    return items;
 }
 
 /**
@@ -81,21 +148,9 @@ export async function fetchFeed(source: FeedSource): Promise<NewsItem[]> {
         }
 
         const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'application/xml');
+        const data = xmlParser.parse(text) as Record<string, unknown>;
 
-        // RSS 2.0 の item または RDF の item を取得
-        const items = doc.querySelectorAll('item');
-        const newsItems: NewsItem[] = [];
-
-        items.forEach((item) => {
-            const parsed = parseRSSItem(item, source);
-            if (parsed) {
-                newsItems.push(parsed);
-            }
-        });
-
-        return newsItems;
+        return parseRSSItems(data, source);
     } catch (error) {
         console.error(`Error fetching ${source.name}:`, error);
         return [];
@@ -112,11 +167,26 @@ export async function collectAllNews(): Promise<NewsItem[]> {
         enabledSources.map((source) => fetchFeed(source))
     );
 
-    // フラット化して日付順にソート（新しい順）
+    // フラット化
     const allNews = results.flat();
-    allNews.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
 
-    return allNews;
+    // 重複排除（タイトルベース）
+    const seen = new Set<string>();
+    const deduplicated = allNews.filter((item) => {
+        const key = item.title.toLowerCase().trim();
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+
+    // 日付順にソート（新しい順）
+    deduplicated.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+
+    console.log(`Collected ${allNews.length} news items, ${deduplicated.length} after dedup, from ${enabledSources.length} sources`);
+
+    return deduplicated;
 }
 
 /**

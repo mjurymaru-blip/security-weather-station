@@ -1,7 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/useSettings';
+
+interface GeminiModel {
+    id: string;
+    name: string;
+    description: string;
+}
 
 /**
  * 設定パネルコンポーネント
@@ -27,6 +33,50 @@ export function SettingsPanel() {
     const [tempApiKey, setTempApiKey] = useState('');
     const [newTech, setNewTech] = useState('');
     const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    // モデル関連
+    const [models, setModels] = useState<GeminiModel[]>([]);
+    const [selectedModel, setSelectedModel] = useState('');
+    const [isLoadingModels, setIsLoadingModels] = useState(false);
+
+    // APIキーが設定されている場合、モデル一覧を取得
+    useEffect(() => {
+        if (hasKey && apiKey && isOpen) {
+            fetchModels(apiKey);
+        }
+    }, [hasKey, apiKey, isOpen]);
+
+    const fetchModels = async (key: string) => {
+        setIsLoadingModels(true);
+        try {
+            const response = await fetch('/api/models', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: key }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setModels(data.models || []);
+                // 現在の設定モデルがあればそれを選択、なければ最初のモデル
+                if (data.models?.length > 0) {
+                    const currentModel = settings.geminiModel;
+                    const modelExists = data.models.some((m: GeminiModel) => m.id === currentModel);
+                    if (!modelExists) {
+                        setSelectedModel(data.models[0].id);
+                        updateSettings({ geminiModel: data.models[0].id });
+                    } else {
+                        setSelectedModel(currentModel);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch models:', error);
+        } finally {
+            setIsLoadingModels(false);
+        }
+    };
 
     if (!isLoaded) return null;
 
@@ -34,8 +84,8 @@ export function SettingsPanel() {
         if (!tempApiKey.trim()) return;
 
         setTestStatus('testing');
+        setErrorMessage('');
 
-        // APIキーをテスト
         try {
             const response = await fetch('/api/test-key', {
                 method: 'POST',
@@ -43,22 +93,30 @@ export function SettingsPanel() {
                 body: JSON.stringify({ apiKey: tempApiKey }),
             });
 
+            const data = await response.json();
+
             if (response.ok) {
                 setApiKeyValue(tempApiKey);
                 setTempApiKey('');
                 setTestStatus('success');
+                // モデル一覧を取得
+                fetchModels(tempApiKey);
                 setTimeout(() => setTestStatus('idle'), 2000);
             } else {
                 setTestStatus('error');
-                setTimeout(() => setTestStatus('idle'), 3000);
+                setErrorMessage(data.error || 'APIキーが無効です');
+                setTimeout(() => setTestStatus('idle'), 5000);
             }
-        } catch {
-            // APIルートがまだない場合は直接保存
-            setApiKeyValue(tempApiKey);
-            setTempApiKey('');
-            setTestStatus('success');
-            setTimeout(() => setTestStatus('idle'), 2000);
+        } catch (error) {
+            setTestStatus('error');
+            setErrorMessage('接続エラー');
+            setTimeout(() => setTestStatus('idle'), 3000);
         }
+    };
+
+    const handleModelChange = (modelId: string) => {
+        setSelectedModel(modelId);
+        updateSettings({ geminiModel: modelId });
     };
 
     const handleAddTech = () => {
@@ -139,6 +197,9 @@ export function SettingsPanel() {
                                             testStatus === 'error' ? '✗ エラー' :
                                                 '保存'}
                                 </button>
+                                {testStatus === 'error' && errorMessage && (
+                                    <p className="text-xs text-red-400">{errorMessage}</p>
+                                )}
                                 <p className="text-xs opacity-50">
                                     <a
                                         href="https://aistudio.google.com/app/apikey"
@@ -153,6 +214,30 @@ export function SettingsPanel() {
                             </div>
                         )}
                     </section>
+
+                    {/* Model Selection Section */}
+                    {hasKey && (
+                        <section className="space-y-2">
+                            <h4 className="text-sm font-medium opacity-70">🤖 モデル選択</h4>
+                            {isLoadingModels ? (
+                                <p className="text-xs opacity-50">モデル一覧を取得中...</p>
+                            ) : models.length > 0 ? (
+                                <select
+                                    value={selectedModel}
+                                    onChange={(e) => handleModelChange(e.target.value)}
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30"
+                                >
+                                    {models.map((model) => (
+                                        <option key={model.id} value={model.id} className="bg-gray-900">
+                                            {model.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-xs opacity-50">利用可能なモデルがありません</p>
+                            )}
+                        </section>
+                    )}
 
                     {/* Tech Stack Section */}
                     <section className="space-y-2">

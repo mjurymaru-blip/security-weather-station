@@ -152,19 +152,25 @@ async function runAnalystWithKey(
     }
 
     const newsListText = newsItems
-        .slice(0, 15)
-        .map((item, i) => `${i + 1}. [${item.source}] ${item.title}: ${item.rawContent.slice(0, 150)}...`)
+        .slice(0, 30)
+        .map((item, i) => `${i + 1}. [${item.source}] ${item.title}: ${item.rawContent.slice(0, 100)}`)
         .join('\n');
 
     const prompt = `あなたはサイバーセキュリティアナリストです。
 戦略: ${orchestratorOutput.strategy}, トーン: ${orchestratorOutput.tone}
 ユーザーの技術スタック: ${profile.techStack.join(', ')}
 
+【重要な指示】
+- 同じソフトウェア/製品に関する複数の脆弱性は、1つの項目にまとめてください
+- 例: 「Chrome の脆弱性が3件」→ 1つの項目として「Google Chrome セキュリティアップデート（3件の脆弱性修正）」
+- ユーザーの技術スタックに関連するものを優先してください
+- 最大5項目までに絞ってください
+
 ニュース:
 ${newsListText}
 
 JSON出力:
-{"summary":"3行要約","relevanceReason":"関連理由","analyzedItems":[{"id":"ID","title":"タイトル","threatLevel":1-5,"summary":"要約","relevanceScore":0-1}]}`;
+{"summary":"全体の3行要約","relevanceReason":"ユーザーへの関連理由","analyzedItems":[{"id":"software-name","title":"ソフトウェア名とアップデート内容","threatLevel":1-5,"summary":"脆弱性の概要（複数あれば件数も）","relevanceScore":0-1}]}`;
 
     try {
         const result = await generateJSON<{
