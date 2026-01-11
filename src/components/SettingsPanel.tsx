@@ -3,12 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/useSettings';
 
-interface GeminiModel {
-    id: string;
-    name: string;
-    description: string;
-}
-
 /**
  * 設定パネルコンポーネント
  * 
@@ -26,6 +20,9 @@ export function SettingsPanel() {
         updateProfile,
         settings,
         updateSettings,
+        models,
+        isLoadingModels,
+        fetchModelsForKey,
         isLoaded,
     } = useSettings();
 
@@ -34,49 +31,24 @@ export function SettingsPanel() {
     const [newTech, setNewTech] = useState('');
     const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
-
-    // モデル関連
-    const [models, setModels] = useState<GeminiModel[]>([]);
     const [selectedModel, setSelectedModel] = useState('');
-    const [isLoadingModels, setIsLoadingModels] = useState(false);
 
     // APIキーが設定されている場合、モデル一覧を取得
     useEffect(() => {
-        if (hasKey && apiKey && isOpen) {
-            fetchModels(apiKey);
+        if (hasKey && apiKey && isOpen && models.length === 0) {
+            fetchModelsForKey(apiKey);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasKey, apiKey, isOpen]);
 
-    const fetchModels = async (key: string) => {
-        setIsLoadingModels(true);
-        try {
-            const response = await fetch('/api/models', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ apiKey: key }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setModels(data.models || []);
-                // 現在の設定モデルがあればそれを選択、なければ最初のモデル
-                if (data.models?.length > 0) {
-                    const currentModel = settings.geminiModel;
-                    const modelExists = data.models.some((m: GeminiModel) => m.id === currentModel);
-                    if (!modelExists) {
-                        setSelectedModel(data.models[0].id);
-                        updateSettings({ geminiModel: data.models[0].id });
-                    } else {
-                        setSelectedModel(currentModel);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch models:', error);
-        } finally {
-            setIsLoadingModels(false);
+    // モデル一覧が更新されたら選択を同期
+    useEffect(() => {
+        if (models.length > 0) {
+            const currentModel = settings.geminiModel;
+            const modelExists = models.some((m) => m.id === currentModel);
+            setSelectedModel(modelExists ? currentModel : models[0].id);
         }
-    };
+    }, [models, settings.geminiModel]);
 
     if (!isLoaded) return null;
 
@@ -87,30 +59,29 @@ export function SettingsPanel() {
         setErrorMessage('');
 
         try {
-            const response = await fetch('/api/test-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ apiKey: tempApiKey }),
-            });
+            // クライアントサイドでAPIキーをテスト
+            const { testApiKey } = await import('@/lib/gemini-client');
+            const result = await testApiKey(tempApiKey);
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (result.valid) {
                 setApiKeyValue(tempApiKey);
                 setTempApiKey('');
                 setTestStatus('success');
-                // モデル一覧を取得
-                fetchModels(tempApiKey);
                 setTimeout(() => setTestStatus('idle'), 2000);
             } else {
                 setTestStatus('error');
-                setErrorMessage(data.error || 'APIキーが無効です');
+                setErrorMessage('APIキーが無効です');
                 setTimeout(() => setTestStatus('idle'), 5000);
             }
         } catch (error) {
             setTestStatus('error');
-            setErrorMessage('接続エラー');
-            setTimeout(() => setTestStatus('idle'), 3000);
+            const errorMsg = error instanceof Error ? error.message : '接続エラー';
+            if (errorMsg.includes('429') || errorMsg.includes('quota')) {
+                setErrorMessage('API利用制限に達しました。1〜2分待ってください。');
+            } else {
+                setErrorMessage(errorMsg);
+            }
+            setTimeout(() => setTestStatus('idle'), 5000);
         }
     };
 
@@ -153,12 +124,6 @@ export function SettingsPanel() {
                 <div className="absolute bottom-16 right-0 w-80 max-h-[70vh] overflow-y-auto bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-4 space-y-4">
                     <div className="flex justify-between items-center">
                         <h3 className="font-bold text-lg">⚙️ 設定</h3>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="opacity-60 hover:opacity-100"
-                        >
-                            ✕
-                        </button>
                     </div>
 
                     {/* API Key Section */}
@@ -304,6 +269,14 @@ export function SettingsPanel() {
                             🔒 APIキーはブラウザのlocalStorageにのみ保存され、外部サーバーには送信されません。
                         </p>
                     </section>
+
+                    {/* OK Button */}
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition mt-4"
+                    >
+                        OK
+                    </button>
                 </div>
             )}
         </div>

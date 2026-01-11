@@ -1,6 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * Gemini API クライアント（ブラウザ用）
+ * 
+ * camp-checklist方式: クライアントから直接Gemini APIを呼び出す
+ * APIキーはlocalStorageに保存され、ブラウザからのみ送信される
+ */
+
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { collectAllNews, filterRecentNews } from '@/lib/collector';
 import type {
     NewsItem,
     OrchestratorOutput,
@@ -11,82 +16,53 @@ import type {
 } from '@/types';
 import { calcWeather } from '@/lib/weather-scorer';
 import { getNarratorMode } from '@/lib/time-utils';
+import type { WeatherReport } from '@/actions/pipeline';
 
 /**
- * セキュリティ分析APIエンドポイント
- * 
- * POST /api/analyze
- * Body: { 
- *   apiKey: string,
- *   profile: UserProfile,
- *   model?: string
- * }
+ * モデル一覧を取得
  */
-export async function POST(request: NextRequest) {
+export async function fetchModels(apiKey: string): Promise<{ id: string; name: string }[]> {
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch models');
+    }
+
+    const data = await response.json();
+    return (data.models || [])
+        .filter((m: { supportedGenerationMethods?: string[] }) =>
+            m.supportedGenerationMethods?.includes('generateContent')
+        )
+        .map((m: { name: string; displayName: string }) => ({
+            id: m.name.replace('models/', ''),
+            name: m.displayName,
+        }));
+}
+
+/**
+ * APIキーをテスト（モデル一覧取得のみ）
+ */
+export async function testApiKey(apiKey: string): Promise<{ valid: boolean; models: { id: string; name: string }[] }> {
     try {
-        const { apiKey, profile, model = 'gemini-2.0-flash' } = await request.json();
-
-        if (!apiKey) {
-            return NextResponse.json(
-                { error: 'API key is required' },
-                { status: 400 }
-            );
-        }
-
-        const userProfile: UserProfile = profile || {
-            techStack: ['Linux', 'Docker', 'Next.js', 'PostgreSQL', 'Node.js'],
-            interests: ['OSS', 'Web Security', 'Cloud'],
-        };
-
-        // 1. Collector: ニュース収集
-        const allNews = await collectAllNews();
-        const recentNews = filterRecentNews(allNews, 3);
-
-        // Gemini クライアント初期化
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const genModel = genAI.getGenerativeModel({ model });
-
-        // 2. Orchestrator: 戦略決定
-        const orchestratorOutput = await runOrchestratorWithKey(genModel, recentNews, userProfile);
-
-        // 3. Analyst: 技術分析
-        const analystOutput = await runAnalystWithKey(genModel, recentNews, orchestratorOutput, userProfile);
-
-        // 4. Narrator: 文章整形
-        const mode = getNarratorMode();
-        const narratorOutput = await runNarratorWithKey(genModel, analystOutput, mode);
-
-        return NextResponse.json({
-            success: true,
-            report: {
-                generatedAt: new Date().toISOString(),
-                mode,
-                weatherCondition: analystOutput.weatherCondition,
-                threatLevel: analystOutput.threatLevel,
-                headline: narratorOutput.headline,
-                body: narratorOutput.body,
-                closingRemark: narratorOutput.closingRemark,
-                relevanceReason: analystOutput.relevanceReason,
-                analyzedItems: analystOutput.analyzedItems,
-                newsItems: recentNews,
-                orchestratorOutput,
-            },
-        });
-    } catch (error) {
-        console.error('Analysis error:', error);
-        return NextResponse.json(
-            { error: 'Analysis failed', details: String(error) },
-            { status: 500 }
-        );
+        const models = await fetchModels(apiKey);
+        return { valid: models.length > 0, models };
+    } catch {
+        return { valid: false, models: [] };
     }
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-async function generateJSON<T>(model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>, prompt: string): Promise<T> {
-    const result = await model.generateContent({
+/**
+ * JSONを生成
+ */
+async function generateJSON<T>(
+    genAI: GoogleGenerativeAI,
+    model: string,
+    prompt: string
+): Promise<T> {
+    const genModel = genAI.getGenerativeModel({ model });
+    const result = await genModel.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
             responseMimeType: 'application/json',
@@ -96,20 +72,70 @@ async function generateJSON<T>(model: ReturnType<GoogleGenerativeAI['getGenerati
     return JSON.parse(text) as T;
 }
 
-async function runOrchestratorWithKey(
-    model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+/**
+ * セキュリティ分析を実行（クライアントサイド）
+ */
+export async function analyzeSecurityNews(
+    apiKey: string,
+    model: string,
     newsItems: NewsItem[],
     profile: UserProfile
-): Promise<OrchestratorOutput> {
+): Promise<WeatherReport> {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const mode = getNarratorMode();
+
+    // ニュースがない場合のデフォルト
     if (newsItems.length === 0) {
         return {
-            strategy: 'brief',
-            tone: 'calm',
-            reason: '本日は関連するセキュリティニュースがありません',
-            focusItems: [],
+            generatedAt: new Date(),
+            mode,
+            weatherCondition: 'sunny',
+            threatLevel: 1,
+            headline: '☀️ 今日のインターネットは晴れ',
+            body: '本日は特に注目すべきセキュリティニュースはありません。穏やかな一日になりそうです。',
+            closingRemark: '引き続き、安全なインターネットライフをお過ごしください。',
+            relevanceReason: '特に対応が必要な項目はありません。',
+            analyzedItems: [],
+            newsItems: [],
+            orchestratorOutput: {
+                strategy: 'brief',
+                tone: 'calm',
+                reason: '本日は関連するセキュリティニュースがありません',
+                focusItems: [],
+            },
         };
     }
 
+    // 1. Orchestrator
+    const orchestratorOutput = await runOrchestrator(genAI, model, newsItems, profile);
+
+    // 2. Analyst
+    const analystOutput = await runAnalyst(genAI, model, newsItems, orchestratorOutput, profile);
+
+    // 3. Narrator
+    const narratorOutput = await runNarrator(genAI, model, analystOutput, mode);
+
+    return {
+        generatedAt: new Date(),
+        mode,
+        weatherCondition: analystOutput.weatherCondition,
+        threatLevel: analystOutput.threatLevel,
+        headline: narratorOutput.headline,
+        body: narratorOutput.body,
+        closingRemark: narratorOutput.closingRemark,
+        relevanceReason: analystOutput.relevanceReason,
+        analyzedItems: analystOutput.analyzedItems,
+        newsItems,
+        orchestratorOutput,
+    };
+}
+
+async function runOrchestrator(
+    genAI: GoogleGenerativeAI,
+    model: string,
+    newsItems: NewsItem[],
+    profile: UserProfile
+): Promise<OrchestratorOutput> {
     const newsListText = newsItems
         .slice(0, 20)
         .map((item, i) => `${i + 1}. [${item.source}] ${item.title}`)
@@ -124,7 +150,7 @@ ${newsListText}
 {"strategy":"brief|normal|deep","tone":"calm|cautious|alert","reason":"理由","focusItems":["注目ニュース"]}`;
 
     try {
-        return await generateJSON<OrchestratorOutput>(model, prompt);
+        return await generateJSON<OrchestratorOutput>(genAI, model, prompt);
     } catch {
         return {
             strategy: 'normal',
@@ -135,22 +161,13 @@ ${newsListText}
     }
 }
 
-async function runAnalystWithKey(
-    model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+async function runAnalyst(
+    genAI: GoogleGenerativeAI,
+    model: string,
     newsItems: NewsItem[],
     orchestratorOutput: OrchestratorOutput,
     profile: UserProfile
 ): Promise<AnalystOutput> {
-    if (newsItems.length === 0) {
-        return {
-            weatherCondition: 'sunny',
-            threatLevel: 1,
-            summary: '本日は関連するセキュリティニュースがありません。',
-            relevanceReason: '特に対応が必要な項目はありません。',
-            analyzedItems: [],
-        };
-    }
-
     const newsListText = newsItems
         .slice(0, 30)
         .map((item, i) => `${i + 1}. [${item.source}] ${item.title}: ${item.rawContent.slice(0, 100)}`)
@@ -177,7 +194,7 @@ JSON出力:
             summary: string;
             relevanceReason: string;
             analyzedItems: AnalystOutput['analyzedItems'];
-        }>(model, prompt);
+        }>(genAI, model, prompt);
 
         const scores: WeatherScores = {
             volume: Math.min(newsItems.length / 10, 1),
@@ -210,8 +227,9 @@ JSON出力:
     }
 }
 
-async function runNarratorWithKey(
-    model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+async function runNarrator(
+    genAI: GoogleGenerativeAI,
+    model: string,
     analystOutput: AnalystOutput,
     mode: 'forecast' | 'review'
 ): Promise<NarratorOutput> {
@@ -230,7 +248,7 @@ JSON出力:
             headline: string;
             body: string;
             closingRemark: string;
-        }>(model, prompt);
+        }>(genAI, model, prompt);
 
         return { mode, ...result };
     } catch {

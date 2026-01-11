@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMockReport } from '@/data/mock-reports';
 import { getApiKey, getUserProfile, getSettings } from '@/lib/settings-store';
+import { collectNewsClient, filterRecentNews } from '@/lib/collector-client';
+import { analyzeSecurityNews } from '@/lib/gemini-client';
 import type { WeatherReport } from '@/actions/pipeline';
 
 interface UseWeatherReportReturn {
@@ -16,6 +18,8 @@ interface UseWeatherReportReturn {
 /**
  * 天気レポートを取得するカスタムフック
  * 設定に応じてデモモードまたは本番モードを切り替え
+ * 
+ * クライアントサイドで直接API呼び出しを行う（GitHub Pages対応）
  */
 export function useWeatherReport(): UseWeatherReportReturn {
     const [report, setReport] = useState<WeatherReport | null>(null);
@@ -41,36 +45,35 @@ export function useWeatherReport(): UseWeatherReportReturn {
                 return;
             }
 
-            // 本番モード: APIを呼び出し
+            // 本番モード: クライアントサイドで直接API呼び出し
             setIsLiveMode(true);
 
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    apiKey,
-                    profile,
-                    model: settings.geminiModel,
-                }),
-            });
+            // 1. ニュース収集（CORSプロキシ経由）
+            const allNews = await collectNewsClient();
+            const recentNews = filterRecentNews(allNews, 3);
 
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Analysis failed');
-            }
-
-            const data = await response.json();
-
-            // APIレスポンスをWeatherReport形式に変換
-            const liveReport: WeatherReport = {
-                ...data.report,
-                generatedAt: new Date(data.report.generatedAt),
-            };
+            // 2. AI分析（直接Gemini API呼び出し）
+            const liveReport = await analyzeSecurityNews(
+                apiKey,
+                settings.geminiModel,
+                recentNews,
+                profile
+            );
 
             setReport(liveReport);
         } catch (err) {
             console.error('Failed to fetch report:', err);
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
+            // レート制限エラーの検出
+            if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+                setError('API利用制限に達しました。1〜2分待ってから再試行してください。');
+            } else if (errorMessage.includes('API')) {
+                setError('API呼び出しに失敗しました。別のモデルを試すか、しばらく待ってください。');
+            } else {
+                setError(errorMessage);
+            }
+
             // エラー時はフォールバックでモックデータを表示
             const mockReport = getMockReport();
             setReport(mockReport);

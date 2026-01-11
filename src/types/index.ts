@@ -9,7 +9,7 @@
 /**
  * ニュースソースの種別
  */
-export type NewsSource = 'nvd' | 'jpcert' | 'rss';
+export type NewsSource = 'nvd' | 'jpcert' | 'ipa' | 'jvn' | 'rss';
 
 /**
  * 収集されたニュースアイテム（Collector出力）

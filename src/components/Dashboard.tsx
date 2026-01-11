@@ -80,7 +80,14 @@ export function Dashboard() {
                         </button>
                     </div>
                     {error && (
-                        <p className="text-xs text-yellow-400 mt-1">⚠️ {error}（フォールバックデータを表示中）</p>
+                        <div className="mt-2 p-2 bg-yellow-900/30 rounded text-xs">
+                            <p className="text-yellow-400">⚠️ {error}</p>
+                            <p className="text-yellow-300/70 mt-1">
+                                {error.includes('API') || error.includes('model')
+                                    ? '→ 設定⚙️から別のモデルを選択するか、しばらく待ってから再試行してください'
+                                    : '→ デモデータを表示中。設定⚙️でデモモードをオフにして再試行してください'}
+                            </p>
+                        </div>
                     )}
                 </div>
 
