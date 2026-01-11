@@ -56,6 +56,7 @@
 - [x] `BroadcastCard` コンポーネント（3行要約）
 - [x] `RelevanceCard` コンポーネント
 - [x] `NewsList` コンポーネント
+- [x] `WeatherTrend` コンポーネント（履歴グラフ）
 
 ### 3.3 Pages
 - [x] メインダッシュボード (`/`)
@@ -71,30 +72,41 @@
 
 ---
 
-## Phase 5: 追加機能（進行中）
+## Phase 5: 追加機能
 
-### 5.1 デモモード
+### 5.1 デモモード ✅
 - [x] モックデータ作成 (`src/data/mock-reports.ts`)
 - [x] URLパラメータで天気切替 (`?weather=stormy`)
 - [x] デモモードバナー UI
 
-### 5.2 データ管理
+### 5.2 データ管理 ✅
 - [x] RSSソースをJSON化 (`src/data/feed-sources.json`)
 - [x] 有効/無効フラグ対応
 
-### 5.3 クライアント設定
+### 5.3 クライアント設定 ✅
 - [x] 設定ストア (`src/lib/settings-store.ts`)
 - [x] React Hook (`src/hooks/useSettings.ts`)
 - [x] 設定パネルUI (`src/components/SettingsPanel.tsx`)
-- [x] APIキーテストAPI (`/api/test-key`)
-- [x] 本番分析API (`/api/analyze`)
+- [x] クライアントサイドAPI呼び出し
 - [x] localStorage保存
 - [x] ユーザープロファイル設定
 
-### 5.4 PWA対応（未着手）
-- [ ] Service Worker
-- [ ] manifest.json
-- [ ] オフライン対応
+### 5.4 PWA対応 ✅
+- [x] Service Worker
+- [x] manifest.json
+- [x] GitHub Pages デプロイ
+
+### 5.5 履歴/Trend表示 ✅
+- [x] IndexedDB履歴保存 (`src/lib/history-store.ts`)
+- [x] 履歴フック (`src/hooks/useWeatherHistory.ts`)
+- [x] 天気推移グラフ (`src/components/WeatherTrend.tsx`)
+
+### 5.6 APIキー暗号化 🔄 進行中
+- [/] 実装計画作成
+- [ ] crypto-store.ts（Web Crypto API）
+- [ ] PasswordDialog.tsx
+- [ ] settings-store.ts 修正
+- [ ] README Security Considerations 追記
 
 ---
 
@@ -106,4 +118,4 @@
 | 2. Intelligence | ✅ 完了 |
 | 3. UI | ✅ 完了 |
 | 4. 仕上げ | ✅ 完了 |
-| 5. 追加機能 | 🔄 進行中 |
+| 5. 追加機能 | 🔄 5.6 進行中 |

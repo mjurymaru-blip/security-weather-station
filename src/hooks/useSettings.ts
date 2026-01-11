@@ -60,6 +60,7 @@ export function useSettings(): UseSettingsReturn {
     const [settingsState, setSettingsState] = useState<AppSettings>({
         useDemoMode: true,
         geminiModel: 'gemini-2.0-flash',
+        useEncryption: false,
     });
     const [models, setModels] = useState<GeminiModel[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);

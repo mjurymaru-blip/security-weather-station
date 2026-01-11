@@ -7,3 +7,4 @@ export { NewsList } from './NewsList';
 export { SettingsPanel } from './SettingsPanel';
 export { Dashboard } from './Dashboard';
 export { WeatherTrend } from './WeatherTrend';
+export { PasswordDialog } from './PasswordDialog';
