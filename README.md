@@ -1,8 +1,25 @@
 # Security Weather Station 🌦️
 
-> **"今日のインターネットは荒れ模様です"**
+> **「今日のインターネットは荒れ模様です」**
 
 セキュリティニュースを「天気予報」として可視化する、個人向けAIダッシュボード。
+
+[![Deploy to GitHub Pages](https://github.com/mjurymaru-blip/security-weather-station/actions/workflows/deploy.yml/badge.svg)](https://github.com/mjurymaru-blip/security-weather-station/actions/workflows/deploy.yml)
+
+**[🌐 Live Demo](https://mjurymaru-blip.github.io/security-weather-station/)**
+
+---
+
+## ✨ Demo
+
+![Dashboard Screenshot](docs/screenshot.png)
+
+| 天気 | 意味 | トリガー条件 |
+|------|------|--------------|
+| ☀️ 晴れ | 平穏 | 関連ニュースなし or 低脅威 |
+| ⛅ 曇り | 注意 | 中程度の脆弱性報告あり |
+| 🌧️ 雨 | 警戒 | 高関連度の脅威を検出 |
+| ⛈️ 嵐 | 緊急 | 複数の高脅威 + 高関連度 |
 
 ---
 
@@ -14,7 +31,17 @@ Instead, it answers a simpler question:
 
 > **"Do I need to care about this today?"**
 
-This app is intentionally opinionated toward individual developers.
+This app is intentionally opinionated toward **individual developers**.
+
+---
+
+## 🛡️ Security & Privacy
+
+- **APIキーはブラウザのlocalStorageにのみ保存**
+- サーバーには一切送信されません（完全クライアントサイド）
+- BYOK (Bring Your Own Key) モデル
+
+> 💡 あなたの鍵はブラウザの外へは一切送信されません
 
 ---
 
@@ -24,6 +51,7 @@ This app is intentionally opinionated toward individual developers.
 - 🧭 **Orchestrator Agent** - AIがAIを制御。ニュース量に応じて分析戦略を動的に決定
 - 🎯 **個人向けフィルタリング** - あなたの技術スタック（Linux, Docker, Next.js等）に基づく関連度判定
 - 🌅 **時間軸** - 朝は予報、夜は振り返り
+- 📱 **PWA対応** - スマホにインストールしてネイティブアプリのように使用
 
 ---
 
@@ -36,23 +64,45 @@ Collector → Orchestrator → Analyst → Narrator → Dashboard
 
 | Agent | Role |
 |-------|------|
-| 🛰️ Collector | RSS/NVD/JPCERT からニュース収集 |
+| 🛰️ Collector | JPCERT/IPA/JVN からニュース収集 |
 | 🧭 Orchestrator | 戦略決定（brief/normal/deep）とトーン制御 |
 | 📊 Weather Scorer | Volume/Severity/Relevance/Trend の複合スコアで天気判定 |
 | 🔬 Analyst | 技術的分析と脅威レベル評価 |
 | 📝 Narrator | 人が読みたい文章に整形 |
 
+### スコアリングロジック
+
+天気判定は**AIに依存しない決定論的ルール**で行われます：
+
+```
+compositeScore = volume×0.15 + severity×0.30 + relevance×0.35 + trend×0.20
+```
+
+| スコア範囲 | 天気 |
+|------------|------|
+| 0.00 - 0.25 | ☀️ 晴れ (sunny) |
+| 0.25 - 0.45 | ⛅ 曇り (cloudy) |
+| 0.45 - 0.65 | 🌧️ 雨 (rainy) |
+| 0.65 - 1.00 | ⛈️ 嵐 (stormy) |
+
+> ⚠️ **AIは判断しない**: 天気スコアは計算式で確定し、AIはナレーション生成のみを担当
+
 ---
 
 ## Getting Started
 
+### GitHub Pagesで使用（推奨）
+
+1. [Live Demo](https://mjurymaru-blip.github.io/security-weather-station/) にアクセス
+2. 設定（⚙️）を開く
+3. [Google AI Studio](https://aistudio.google.com/app/apikey) でAPIキーを取得
+4. APIキーを入力して保存
+
+### ローカル開発
+
 ```bash
 # Install dependencies
 npm install
-
-# Set up environment
-cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
 
 # Run development server
 npm run dev
@@ -64,9 +114,10 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 16 (App Router, Static Export)
 - **Styling**: Tailwind CSS
-- **AI**: Google Gemini Pro (`@google/generative-ai`)
+- **AI**: Google Gemini (`@google/generative-ai`)
+- **Deployment**: GitHub Pages (PWA)
 
 ---
 
