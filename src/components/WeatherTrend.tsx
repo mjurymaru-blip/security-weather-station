@@ -108,6 +108,7 @@ export function WeatherTrend({ history, isLoading }: WeatherTrendProps) {
                                     <div
                                         className={`text-2xl transition-transform hover:scale-125 cursor-default ${isToday ? 'animate-pulse' : ''}`}
                                         title={`${snapshot.date}: ${snapshot.weatherCondition} (Lv.${snapshot.threatLevel})`}
+                                        aria-label={`${snapshot.date}: ${snapshot.weatherCondition === 'sunny' ? '晴れ' : snapshot.weatherCondition === 'cloudy' ? '曇り' : snapshot.weatherCondition === 'rainy' ? '雨' : '嵐'} 脅威レベル${snapshot.threatLevel}`}
                                     >
                                         {icon}
                                     </div>

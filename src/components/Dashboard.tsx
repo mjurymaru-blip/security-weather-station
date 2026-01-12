@@ -137,7 +137,7 @@ export function Dashboard() {
                     <WeatherTrend history={history} isLoading={historyLoading} />
 
                     {/* Relevance */}
-                    <RelevanceCard reason={report.relevanceReason} />
+                    <RelevanceCard reason={report.relevanceReason} isSunny={report.weatherCondition === 'sunny'} />
 
                     {/* News List */}
                     <NewsList items={report.analyzedItems} />
