@@ -101,12 +101,13 @@
 - [x] 履歴フック (`src/hooks/useWeatherHistory.ts`)
 - [x] 天気推移グラフ (`src/components/WeatherTrend.tsx`)
 
-### 5.6 APIキー暗号化 🔄 進行中
-- [/] 実装計画作成
-- [ ] crypto-store.ts（Web Crypto API）
-- [ ] PasswordDialog.tsx
-- [ ] settings-store.ts 修正
-- [ ] README Security Considerations 追記
+### 5.6 APIキー暗号化 ✅
+- [x] 実装計画作成
+- [x] crypto-store.ts（Web Crypto API）
+- [x] PasswordDialog.tsx
+- [x] settings-store.ts 修正
+- [x] SettingsPanel.tsx 暗号化UI追加
+- [x] README Security Considerations 追記
 
 ---
 
@@ -118,4 +119,4 @@
 | 2. Intelligence | ✅ 完了 |
 | 3. UI | ✅ 完了 |
 | 4. 仕上げ | ✅ 完了 |
-| 5. 追加機能 | 🔄 5.6 進行中 |
+| 5. 追加機能 | ✅ 完了 |
