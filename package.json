@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "fast-xml-parser": "^5.3.3",
+    "fast-xml-parser": "^5.3.6",
     "idb": "^8.0.3",
     "next": "16.1.1",
     "react": "19.2.3",
